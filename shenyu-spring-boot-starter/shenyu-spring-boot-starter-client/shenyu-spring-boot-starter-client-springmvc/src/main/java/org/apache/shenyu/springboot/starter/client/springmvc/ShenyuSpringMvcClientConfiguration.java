@@ -17,6 +17,7 @@
 
 package org.apache.shenyu.springboot.starter.client.springmvc;
 
+import org.apache.shenyu.client.springmvc.config.SpringMvcRegisterConfig;
 import org.apache.shenyu.client.springmvc.init.SpringMvcClientEventListener;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.common.utils.VersionUtils;
@@ -40,16 +41,17 @@ public class ShenyuSpringMvcClientConfiguration {
         VersionUtils.checkDuplicate(ShenyuSpringMvcClientConfiguration.class);
     }
 
-    /**
-     * Spring mvc client bean post processor.
-     *
-     * @param clientConfig                   the client config
-     * @param shenyuClientRegisterRepository the shenyu client register repository
-     * @return the spring mvc client bean post processor
-     */
-    @Bean
-    public SpringMvcClientEventListener springHttpClientEventListener(final ShenyuClientConfig clientConfig,
-                                                                          final ShenyuClientRegisterRepository shenyuClientRegisterRepository) {
-        return new SpringMvcClientEventListener(clientConfig.getClient().get(RpcTypeEnum.HTTP.getName()), shenyuClientRegisterRepository);
-    }
+//    /**
+//     * Spring mvc client bean post processor.
+//     *
+//     * @param clientConfig                   the client config
+//     * @param shenyuClientRegisterRepository the shenyu client register repository
+//     * @return the spring mvc client bean post processor
+//     */
+//    @Bean
+//    public SpringMvcClientEventListener springHttpClientEventListener(final ShenyuClientConfig clientConfig,
+//                                                                          final ShenyuClientRegisterRepository shenyuClientRegisterRepository) {
+//        return new SpringMvcClientEventListener(clientConfig.getClient().get(RpcTypeEnum.HTTP.getName()), shenyuClientRegisterRepository);
+//    }
+
 }
