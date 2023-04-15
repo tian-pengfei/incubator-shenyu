@@ -5,15 +5,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.shenyu.client.apidocs.annotations.ApiDoc;
 import org.apache.shenyu.client.apidocs.annotations.ApiModule;
 import org.apache.shenyu.client.core.client.ApiBean;
-import org.apache.shenyu.client.core.client.ApiRegisterDocket;
 import org.apache.shenyu.client.core.client.ClientInfoRefreshedEventListener;
-import org.apache.shenyu.client.core.client.ContextApiRefreshedEventListener;
+import org.apache.shenyu.client.core.client.ClientRegisterConfiguration;
 import org.apache.shenyu.client.core.client.extractor.ApiBeansExtractor;
 import org.apache.shenyu.client.core.client.matcher.AnnotatedApiBeanMatcher;
 import org.apache.shenyu.client.core.client.matcher.AnnotatedApiDefinitionMatcher;
 import org.apache.shenyu.client.core.client.matcher.ApiBeanMatcher;
-import org.apache.shenyu.client.core.client.matcher.Matcher;
-import org.apache.shenyu.client.core.client.parser.Parser;
+import org.apache.shenyu.client.core.client.matcher.ApiDefinitionMatcher;
+import org.apache.shenyu.client.core.client.parser.ApiDocParser;
+import org.apache.shenyu.client.core.client.parser.ApiMetaParser;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.disruptor.ShenyuClientRegisterEventPublisher;
 import org.apache.shenyu.client.springmvc.annotation.ShenyuSpringMvcClient;
@@ -22,13 +22,15 @@ import org.apache.shenyu.common.enums.ApiSourceEnum;
 import org.apache.shenyu.common.enums.ApiStateEnum;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.common.utils.UriUtils;
-import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.config.ShenyuClientConfig;
 import org.apache.shenyu.register.common.dto.ApiDocRegisterDTO;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.apache.shenyu.register.common.enums.EventType;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -51,9 +53,14 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Configuration
-public class SpringMvcRegisterConfig {
+import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_DOC_BEAN_MATCHER;
+import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_DOC_MATCHER;
+import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_META_BEAN_MATCHER;
+import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_META_MATCHER;
 
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnBean(ClientRegisterConfiguration.class)
+public class SpringMvcRegisterConfig {
 
     private final boolean addPrefixed;
 
@@ -90,58 +97,47 @@ public class SpringMvcRegisterConfig {
     }
 
     @Bean
-    public ContextApiRefreshedEventListener<Object> apiEventListener(ApiBeansExtractor<Object> extractor,
-                                                                     ShenyuClientRegisterEventPublisher publisher) {
-
-        return new ApiRegisterDocket<>(extractor, publisher)
-
-                .apiMetaBeanMatcher(apiMetaBeanMatcher())
-                .apiMetaMatcher(apiMetaMatcher())
-                .apiMetaParser(apiMetaParser())
-
-                .apiDocBeanMatcher(apiDocBeanMatcher())
-                .apiDocMatcher(apiDocMatcher())
-                .apiDocParser(apiDocParser()).buildApiRefreshedEventListener();
-    }
-
-    @Bean
+    @ConditionalOnMissingBean
     public ApiBeansExtractor<Object> apiBeansExtractor() {
         return this::getBeans;
     }
 
-    @Bean
-    public ShenyuClientRegisterEventPublisher publisher(final ShenyuClientRegisterRepository shenyuClientRegisterRepository) {
-        ShenyuClientRegisterEventPublisher publisher = ShenyuClientRegisterEventPublisher.getInstance();
-        publisher.start(shenyuClientRegisterRepository);
-        return publisher;
-    }
-
+    @Bean(name = API_META_BEAN_MATCHER )
+    @ConditionalOnMissingBean(name = API_META_BEAN_MATCHER)
     public ApiBeanMatcher<Object> apiMetaBeanMatcher() {
         return new AnnotatedApiBeanMatcher<>(ShenyuSpringMvcClient.class);
     }
 
-    public Matcher<ApiBean<Object>.ApiDefinition> apiMetaMatcher() {
+    @Bean(name = API_META_MATCHER)
+    @ConditionalOnMissingBean(name = API_META_MATCHER)
+    public ApiDefinitionMatcher<Object> apiMetaMatcher() {
         return new AnnotatedApiDefinitionMatcher<>(ShenyuSpringMvcClient.class);
     }
 
-    public Parser<List<MetaDataRegisterDTO>, ApiBean<Object>.ApiDefinition> apiMetaParser() {
+    @Bean
+    public ApiMetaParser<Object> apiMetaParser() {
         return this::apiDefinition2ApiMeta;
     }
 
-    public Matcher<ApiBean<Object>> apiDocBeanMatcher() {
+    @Bean(name = API_DOC_BEAN_MATCHER)
+    @ConditionalOnMissingBean(name = API_DOC_BEAN_MATCHER)
+    public ApiBeanMatcher<Object> apiDocBeanMatcher() {
         return new AnnotatedApiBeanMatcher<>(ApiModule.class);
     }
 
-    public Matcher<ApiBean<Object>.ApiDefinition> apiDocMatcher() {
+    @Bean(name = API_DOC_MATCHER)
+    @ConditionalOnMissingBean(name = API_DOC_MATCHER)
+    public ApiDefinitionMatcher<Object> apiDocMatcher() {
         return new AnnotatedApiDefinitionMatcher<>(ApiDoc.class);
     }
 
-    public Parser<List<ApiDocRegisterDTO>, ApiBean<Object>.ApiDefinition> apiDocParser() {
+    @Bean
+    @ConditionalOnMissingBean
+    public ApiDocParser<Object> apiDocParser() {
         return this::apiDefinition2ApiDoc;
     }
 
     private List<ApiBean<Object>> getBeans(final ApplicationContext context) {
-
 
         Map<String, Object> beanMap = context.getBeansWithAnnotation(Controller.class);
 
@@ -152,7 +148,6 @@ public class SpringMvcRegisterConfig {
         });
         return apiBeans;
     }
-
 
     private Optional<ApiBean<Object>> bean2ApiBean(String beanName, Object bean) {
 
