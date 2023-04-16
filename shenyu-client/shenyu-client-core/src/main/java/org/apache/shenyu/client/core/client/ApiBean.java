@@ -1,14 +1,14 @@
 package org.apache.shenyu.client.core.client;
 
-import org.springframework.lang.NonNull;
+import org.apache.shenyu.common.utils.PathUtils;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ApiBean<T> {
-
-    protected static final String PATH_SEPARATOR = "/";
 
     private final String beanName;
 
@@ -61,6 +61,10 @@ public class ApiBean<T> {
         return beanPath;
     }
 
+    public <A extends Annotation> A getAnnotation(Class<A> annotationClass) {
+        return AnnotatedElementUtils.findMergedAnnotation(targetClass, annotationClass);
+    }
+
     public class ApiDefinition {
 
         private final Method apiMethod;
@@ -76,12 +80,21 @@ public class ApiBean<T> {
             return apiMethod;
         }
 
+        public String getApiMethodName() {
+            return apiMethod.getName();
+        }
+
+
         public String getParentPath() {
             return beanPath;
         }
 
         public String getApiPath() {
-            return pathJoin(contextPath, beanPath, methodPath);
+            return PathUtils.pathJoin(contextPath, beanPath, methodPath);
+        }
+
+        public String getMethodPath() {
+            return methodPath;
         }
 
         public Class<?> getBeanClass() {
@@ -91,18 +104,13 @@ public class ApiBean<T> {
         public ApiBean<T> getApiBean() {
             return ApiBean.this;
         }
-    }
 
-    private static String pathJoin(@NonNull final String... path) {
-
-        StringBuilder result = new StringBuilder(PATH_SEPARATOR);
-
-        for (String p : path) {
-            if (!result.toString().endsWith(PATH_SEPARATOR)) {
-                result.append(PATH_SEPARATOR);
-            }
-            result.append(p.startsWith(PATH_SEPARATOR) ? p.replaceFirst(PATH_SEPARATOR, "") : p);
+        public String getContextPath() {
+            return contextPath;
         }
-        return result.toString();
+
+        public <A extends Annotation> A getAnnotation(Class<A> annotationClass) {
+            return AnnotatedElementUtils.findMergedAnnotation(apiMethod, annotationClass);
+        }
     }
 }

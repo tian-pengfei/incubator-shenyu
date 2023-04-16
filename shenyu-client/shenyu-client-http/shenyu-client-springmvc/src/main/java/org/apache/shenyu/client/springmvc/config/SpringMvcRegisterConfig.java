@@ -10,8 +10,8 @@ import org.apache.shenyu.client.core.client.ClientRegisterConfiguration;
 import org.apache.shenyu.client.core.client.extractor.ApiBeansExtractor;
 import org.apache.shenyu.client.core.client.matcher.AnnotatedApiBeanMatcher;
 import org.apache.shenyu.client.core.client.matcher.AnnotatedApiDefinitionMatcher;
-import org.apache.shenyu.client.core.client.matcher.ApiBeanMatcher;
-import org.apache.shenyu.client.core.client.matcher.ApiDefinitionMatcher;
+import org.apache.shenyu.client.core.client.matcher.Matcher;
+import org.apache.shenyu.client.core.client.parser.ApiBeanMetaParser;
 import org.apache.shenyu.client.core.client.parser.ApiDocParser;
 import org.apache.shenyu.client.core.client.parser.ApiMetaParser;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
@@ -21,6 +21,7 @@ import org.apache.shenyu.common.enums.ApiHttpMethodEnum;
 import org.apache.shenyu.common.enums.ApiSourceEnum;
 import org.apache.shenyu.common.enums.ApiStateEnum;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
+import org.apache.shenyu.common.utils.PathUtils;
 import org.apache.shenyu.common.utils.UriUtils;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.config.ShenyuClientConfig;
@@ -29,7 +30,6 @@ import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.apache.shenyu.register.common.enums.EventType;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -56,6 +56,7 @@ import java.util.stream.Stream;
 import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_DOC_BEAN_MATCHER;
 import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_DOC_MATCHER;
 import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_META_BEAN_MATCHER;
+import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_META_BEAN_PRE_MATCHER;
 import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_META_MATCHER;
 
 @Configuration(proxyBeanMethods = false)
@@ -102,17 +103,36 @@ public class SpringMvcRegisterConfig {
         return this::getBeans;
     }
 
-    @Bean(name = API_META_BEAN_MATCHER )
+    @Bean(name = API_META_BEAN_MATCHER)
     @ConditionalOnMissingBean(name = API_META_BEAN_MATCHER)
-    public ApiBeanMatcher<Object> apiMetaBeanMatcher() {
-        return new AnnotatedApiBeanMatcher<>(ShenyuSpringMvcClient.class);
+    public Matcher<ApiBean<Object>> apiMetaBeanMatcher() {
+        return apiBean -> {
+            ShenyuSpringMvcClient annotation = apiBean.getAnnotation(ShenyuSpringMvcClient.class);
+            if (annotation != null) {
+                return !annotation.path().contains("*");
+            }
+            return true;
+        };
+    }
+
+    @Bean(name = API_META_BEAN_PRE_MATCHER)
+    @ConditionalOnMissingBean(name = API_META_BEAN_PRE_MATCHER)
+    public Matcher<ApiBean<Object>> apiBeanMetaBeanMatcher() {
+
+        return apiBean -> {
+            ShenyuSpringMvcClient annotation = apiBean.getAnnotation(ShenyuSpringMvcClient.class);
+            return annotation != null && annotation.path().contains("*");
+        };
     }
 
     @Bean(name = API_META_MATCHER)
     @ConditionalOnMissingBean(name = API_META_MATCHER)
-    public ApiDefinitionMatcher<Object> apiMetaMatcher() {
-        return new AnnotatedApiDefinitionMatcher<>(ShenyuSpringMvcClient.class);
+    public Matcher<ApiBean<Object>.ApiDefinition> apiMetaMatcher() {
+        return new AnnotatedApiDefinitionMatcher<>(ShenyuSpringMvcClient.class)
+                .or(api -> AnnotationUtils
+                        .isAnnotationDeclaredLocally(ShenyuSpringMvcClient.class, api.getApiBean().getTargetClass()));
     }
+
 
     @Bean
     public ApiMetaParser<Object> apiMetaParser() {
@@ -121,13 +141,13 @@ public class SpringMvcRegisterConfig {
 
     @Bean(name = API_DOC_BEAN_MATCHER)
     @ConditionalOnMissingBean(name = API_DOC_BEAN_MATCHER)
-    public ApiBeanMatcher<Object> apiDocBeanMatcher() {
+    public Matcher<ApiBean<Object>> apiDocBeanMatcher() {
         return new AnnotatedApiBeanMatcher<>(ApiModule.class);
     }
 
     @Bean(name = API_DOC_MATCHER)
     @ConditionalOnMissingBean(name = API_DOC_MATCHER)
-    public ApiDefinitionMatcher<Object> apiDocMatcher() {
+    public Matcher<ApiBean<Object>.ApiDefinition> apiDocMatcher() {
         return new AnnotatedApiDefinitionMatcher<>(ApiDoc.class);
     }
 
@@ -136,6 +156,12 @@ public class SpringMvcRegisterConfig {
     public ApiDocParser<Object> apiDocParser() {
         return this::apiDefinition2ApiDoc;
     }
+
+    @Bean
+    public ApiBeanMetaParser<Object> apiBeanMetaParser() {
+        return this::apiBean2ApiMeta;
+    }
+
 
     private List<ApiBean<Object>> getBeans(final ApplicationContext context) {
 
@@ -155,11 +181,7 @@ public class SpringMvcRegisterConfig {
 
         RequestMapping classRequestMapping = AnnotationUtils.findAnnotation(targetClass, RequestMapping.class);
 
-        if (Objects.isNull(classRequestMapping)) {
-            return Optional.empty();
-        }
-
-        String beanPath = getPath(classRequestMapping);
+        String beanPath = Objects.isNull(classRequestMapping) ? "" : getPath(classRequestMapping);
 
         ApiBean<Object> apiBean = new ApiBean<>(contextPath, beanName, bean, beanPath, targetClass);
 
@@ -191,23 +213,52 @@ public class SpringMvcRegisterConfig {
         return Optional.of(requestMapping.path()[0]).orElse("");
     }
 
+    private MetaDataRegisterDTO apiBean2ApiMeta(ApiBean<Object> apiBean) {
+
+        ShenyuSpringMvcClient annotation = apiBean.getAnnotation(ShenyuSpringMvcClient.class);
+        String apiPath = PathUtils.pathJoin(contextPath, annotation.path());
+        return MetaDataRegisterDTO.builder()
+                .contextPath(contextPath)
+                .addPrefixed(addPrefixed)
+                .appName(appName)
+                .serviceName(apiBean.getTargetClass().getName())
+                .methodName(null)
+                .path(apiPath)
+                .pathDesc(annotation.desc())
+                .parameterTypes(null)
+                .rpcType(RpcTypeEnum.HTTP.getName())
+                .enabled(annotation.enabled())
+                .ruleName(StringUtils.defaultIfBlank(annotation.ruleName(), apiBean.getBeanPath()))
+                .registerMetaData(annotation.registerMetaData())
+                .build();
+    }
+
     private List<MetaDataRegisterDTO> apiDefinition2ApiMeta(ApiBean<Object>.ApiDefinition apiDefinition) {
 
-        ShenyuSpringMvcClient annotation = apiDefinition.getApiMethod().getAnnotation(ShenyuSpringMvcClient.class);
+        ShenyuSpringMvcClient annotation = apiDefinition.getAnnotation(ShenyuSpringMvcClient.class);
+
+        annotation = annotation == null ? apiDefinition.getApiBean().getAnnotation(ShenyuSpringMvcClient.class)
+                : annotation;
+        String methodPath = annotation.path();
+        if (StringUtils.isEmpty(methodPath)) {
+            methodPath = apiDefinition.getMethodPath();
+        }
+
+        String apiPath = PathUtils.pathJoin(contextPath, apiDefinition.getParentPath(), methodPath);
+
+        String parameterTypes = (Optional.ofNullable(apiDefinition.getApiMethod())
+                .map(m -> Arrays.stream(m.getParameterTypes()).map(Class::getName)
+                        .collect(Collectors.joining(","))).orElse(null));
 
         return Lists.newArrayList(MetaDataRegisterDTO.builder()
                 .contextPath(contextPath)
                 .addPrefixed(addPrefixed)
                 .appName(appName)
                 .serviceName(apiDefinition.getBeanClass().getName())
-                .methodName(Optional.ofNullable(apiDefinition.getApiMethod()).map(Method::getName).orElse(null))
-                .path(apiDefinition.getApiPath())
+                .methodName(apiDefinition.getApiMethodName())
+                .path(apiPath)
                 .pathDesc(annotation.desc())
-                .parameterTypes(Optional.ofNullable(apiDefinition.getApiMethod())
-                        .map(m -> Arrays.stream(m.getParameterTypes())
-                                .map(Class::getName)
-                                .collect(Collectors.joining(","))
-                        ).orElse(null))
+                .parameterTypes(parameterTypes)
                 .rpcType(RpcTypeEnum.HTTP.getName())
                 .enabled(annotation.enabled())
                 .ruleName(StringUtils.defaultIfBlank(annotation.ruleName(), apiDefinition.getApiPath()))

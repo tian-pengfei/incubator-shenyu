@@ -84,6 +84,8 @@ public final class ShenyuClientConstants {
 
     public static final String API_META_BEAN_MATCHER = "API_META_BEAN_MATCHER";
 
+    public static final String API_META_BEAN_PRE_MATCHER = "API_META_BEAN_PRE_MATCHER";
+
     public static final String API_DOC_BEAN_MATCHER = "API_DOC_BEAN_MATCHER";
 
     public static final String API_META_MATCHER = "API_META_MATCHER";

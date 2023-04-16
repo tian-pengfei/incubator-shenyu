@@ -9,7 +9,8 @@ public final class ApiBeanRegistrar<T> extends AbstractRegistrar<ApiBean<T>> {
 
     AbstractRegistrar<ApiBean<T>.ApiDefinition> apiRegistrar;
 
-    public ApiBeanRegistrar(Matcher<ApiBean<T>> matcher, AbstractRegistrar<ApiBean<T>.ApiDefinition> apiRegistrar) {
+    public ApiBeanRegistrar(Matcher<ApiBean<T>> matcher,
+                            AbstractRegistrar<ApiBean<T>.ApiDefinition> apiRegistrar) {
         super(matcher);
         this.apiRegistrar = apiRegistrar;
     }
@@ -19,4 +20,6 @@ public final class ApiBeanRegistrar<T> extends AbstractRegistrar<ApiBean<T>> {
         List<ApiBean<T>.ApiDefinition> apiDefinition = element.getApiDefinitions();
         apiDefinition.forEach(api -> apiRegistrar.register(api));
     }
+
+
 }

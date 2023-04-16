@@ -48,7 +48,7 @@ public class ShenyuSpringMvcClientConfiguration {
      * @param shenyuClientRegisterRepository the shenyu client register repository
      * @return the spring mvc client bean post processor
      */
-    @Bean
+//    @Bean
     public SpringMvcClientEventListener springHttpClientEventListener(final ShenyuClientConfig clientConfig,
                                                                           final ShenyuClientRegisterRepository shenyuClientRegisterRepository) {
         return new SpringMvcClientEventListener(clientConfig.getClient().get(RpcTypeEnum.HTTP.getName()), shenyuClientRegisterRepository);

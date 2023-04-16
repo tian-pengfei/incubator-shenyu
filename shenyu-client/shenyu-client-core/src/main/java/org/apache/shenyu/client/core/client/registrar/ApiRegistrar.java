@@ -16,8 +16,7 @@ public class ApiRegistrar<T, D extends DataTypeParent> extends AbstractRegistrar
 
     public ApiRegistrar(Matcher<ApiBean<T>.ApiDefinition> matcher,
                         Parser<List<D>, ApiBean<T>.ApiDefinition> parser,
-                        ShenyuClientRegisterEventPublisher publisher
-    ) {
+                        ShenyuClientRegisterEventPublisher publisher) {
         super(matcher);
         this.publisher = publisher;
         this.parser = parser;
