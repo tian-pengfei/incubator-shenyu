@@ -1,5 +1,7 @@
-package org.apache.shenyu.client.core.client;
+package org.apache.shenyu.client.auto.config;
 
+import org.apache.shenyu.client.core.client.ApiBean;
+import org.apache.shenyu.client.core.client.ContextApiRefreshedEventListener;
 import org.apache.shenyu.client.core.client.extractor.ApiBeansExtractor;
 import org.apache.shenyu.client.core.client.matcher.Matcher;
 import org.apache.shenyu.client.core.client.parser.ApiBeanMetaParser;
@@ -29,11 +31,6 @@ import static org.apache.shenyu.client.core.constant.ShenyuClientConstants.API_M
 
 @Configuration(proxyBeanMethods = false)
 public class ClientRegisterConfiguration {
-
-//    @Bean
-//    ClientInfoRefreshedEventListener clientInfoListener(PropertiesConfig clientConfig,ShenyuClientRegisterEventPublisher publisher, ){
-//        return new ClientInfoRefreshedEventListener(clientConfig,publisher);
-//    }
 
     @Bean
     <T> ContextApiRefreshedEventListener<T> apiListener(ApiBeansExtractor<T> apiBeanExtractor, List<AbstractRegistrar<ApiBean<T>>> apiMetaBeanRegistrars) {

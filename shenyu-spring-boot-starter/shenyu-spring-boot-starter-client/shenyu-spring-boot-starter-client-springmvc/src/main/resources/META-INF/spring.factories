@@ -17,4 +17,4 @@
 
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
 org.apache.shenyu.springboot.starter.client.springmvc.ShenyuSpringMvcClientConfiguration,\
-org.apache.shenyu.client.springmvc.config.SpringMvcRegisterConfig
+org.apache.shenyu.springboot.starter.client.springmvc.SpringMvcRegisterConfig

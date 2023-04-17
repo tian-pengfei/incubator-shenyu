@@ -1,6 +1,5 @@
-package org.apache.shenyu.client.core.annotation;
+package org.apache.shenyu.client.auto.config;
 
-import org.apache.shenyu.client.core.client.ClientRegisterConfiguration;
 import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.ElementType;

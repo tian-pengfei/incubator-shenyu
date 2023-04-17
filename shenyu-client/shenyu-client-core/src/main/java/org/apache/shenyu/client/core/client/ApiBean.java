@@ -65,6 +65,10 @@ public class ApiBean<T> {
         return AnnotatedElementUtils.findMergedAnnotation(targetClass, annotationClass);
     }
 
+    public String getContextPath() {
+        return contextPath;
+    }
+
     public class ApiDefinition {
 
         private final Method apiMethod;
@@ -83,7 +87,6 @@ public class ApiBean<T> {
         public String getApiMethodName() {
             return apiMethod.getName();
         }
-
 
         public String getParentPath() {
             return beanPath;
