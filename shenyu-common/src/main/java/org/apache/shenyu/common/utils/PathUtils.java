@@ -57,6 +57,11 @@ public final class PathUtils {
         return StringUtils.endsWith(contextPath, AdminConstants.URI_SLASH_SUFFIX) ? contextPath : contextPath + AdminConstants.URI_SLASH_SUFFIX;
     }
 
+    /**
+     * Joint paths.
+     * @param path paths
+     * @return path
+     */
     public static String pathJoin(@NonNull final String... path) {
 
         StringBuilder result = new StringBuilder(Constants.PATH_SEPARATOR);
