@@ -40,7 +40,7 @@ public class SpringMvcApiBeanMetaParser implements ApiBeanMetaParser<Object> {
                 .parameterTypes(null)
                 .rpcType(RpcTypeEnum.HTTP.getName())
                 .enabled(annotation.enabled())
-                .ruleName(StringUtils.defaultIfBlank(annotation.ruleName(), apiBean.getBeanPath()))
+                .ruleName(StringUtils.defaultIfBlank(annotation.ruleName(), annotation.path()))
                 .registerMetaData(annotation.registerMetaData())
                 .build();
     }
